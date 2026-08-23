@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Zooba 2 — Versão Alfa Final</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            touch-action: none;
+        }
+
+        body, html {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+        }
+
+        #rotate-warning {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #111;
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        @media screen and (orientation: portrait) {
+            #rotate-warning { display: flex; }
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: #27ae60;
+        }
+
+        /* HUD SUPERIOR */
+        #hud {
+            position: absolute;
+            top: 12px; left: 20px; right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .hud-card {
+            background: rgba(0, 0, 0, 0.75);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 2px solid #f1c40f;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        /* CONTROLES MOBILE */
+        #mobile-controls {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 6;
+        }
+
+        /* JOYSTICK */
+        #joystick-zone {
+            position: absolute;
+            bottom: 15vh; left: 5vw;
+            width: 110px; height: 110px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.18);
+            border: 2px dashed rgba(255, 255, 255, 0.45);
+            pointer-events: auto;
+        }
+
+        #joystick-knob {
+            position: absolute;
+            top: 32px; left: 32px;
+            width: 46px; height: 46px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ffffff, #bdc3c7);
+            box-shadow: 0 0 8px rgba(0,0,0,0.6);
+        }
+
+        /* BOTÕES DE AÇÃO */
+        .action-btn {
+            position: absolute;
+            pointer-events: auto;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: 900;
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+        }
+
+        .action-btn:active { transform: scale(0.9); }
+
+        #btn-shotgun {
+            bottom: 16vh; right: 8vw;
+            width: 65px; height: 65px;
+            background: radial-gradient(circle, #e67e22, #d35400);
+            border: 3px solid #f1c40f;
+            font-size: 20px;
+        }
+
+        #btn-spear {
+            bottom: 30vh; right: 18vw;
+            width: 60px; height: 60px;
+            background: radial-gradient(circle, #27ae60, #1e8449);
+            border: 3px solid #2ecc71;
+            font-size: 18px;
+        }
+
+        #btn-bomb {
+            bottom: 44vh; right: 8vw;
+            width: 60px; height: 60px;
+            background: radial-gradient(circle, #c0392b, #922b21);
+            border: 3px solid #e74c3c;
+            font-size: 18px;
+        }
+
+        #btn-skill {
+            bottom: 30vh; right: 3vw;
+            width: 58px; height: 58px;
+            background: radial-gradient(circle, #2980b9, #1a5276);
+            border: 3px solid #74b9ff;
+            font-size: 18px;
+        }
+
+        .btn-cd-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.78);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 13px;
+            color: #f1c40f;
+            display: none;
+        }
+
+        .btn-label { font-size: 8px; text-transform: uppercase; margin-top: 1px; }
+
+        /* MENUS */
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(24,32,45,0.98), rgba(10,14,20,0.99));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        h1 { font-size: 2.2rem; color: #f1c40f; text-shadow: 0 0 10px rgba(241,196,15,0.5); }
+        h2 { font-size: 0.9rem; color: #8a9ba8; margin-bottom: 12px; }
+
+        .menu-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
+
+        .btn-menu {
+            padding: 8px 18px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            border: none;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+
+        /* PAINEL COM SCROLL */
+        .panel {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #f1c40f;
+            border-radius: 12px;
+            padding: 10px;
+            width: 85%;
+            max-width: 520px;
+            max-height: 52vh;
+            overflow-y: auto;
+            touch-action: pan-y;
+            margin-bottom: 8px;
+        }
+
+        .panel::-webkit-scrollbar { width: 6px; }
+        .panel::-webkit-scrollbar-thumb { background: #f1c40f; border-radius: 4px; }
+
+        .starter-card, .league-card, .animal-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.05);
+            margin: 6px 0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            font-size: 0.85rem;
+        }
+
+        .animal-card.selected { border-color: #2ecc71; background: rgba(46,204,113,0.15); }
+        .animal-card.locked { opacity: 0.6; }
+    </style>
+</head>
+<body>
+
+    <div id="rotate-warning">
+        <div style="font-size: 40px;">🔄</div>
+        <h2 style="color: #f1c40f; margin-top: 8px;">VIRE O CELULAR</h2>
+        <p style="color: #aaa; font-size: 12px;">Jogo otimizado para tela deitada.</p>
+    </div>
+
+    <!-- TELA INICIAL -->
+    <div id="starter-menu" class="screen" style="display:none;">
+        <h1>BEM-VINDO AO ZOOBA 2 ALFA!</h1>
+        <h2>Escolha seu animal inicial:</h2>
+        <div class="panel" id="starter-list"></div>
+    </div>
+
+    <!-- MENU PRINCIPAL -->
+    <div id="main-menu" class="screen" style="display:none;">
+        <h1>🦁 ZOOBA 2 — ALFA</h1>
+        <h2>BATTLE ROYALE MOBILE</h2>
+        
+        <div style="margin-bottom: 8px; text-align: center; display: flex; gap: 15px; font-size: 0.85rem;">
+            <p id="menu-trophies" style="color: #f1c40f; font-weight: bold;">🏆 0 Troféus</p>
+            <p id="menu-coins" style="color: #e67e22; font-weight: bold;">🪙 0 Moedas</p>
+            <p id="menu-tokens" style="color: #2ecc71; font-weight: bold;">🎟️ 0 Fichas</p>
+        </div>
+
+        <div class="menu-row">
+            <button class="btn-menu" onclick="startGame('solo')">▶️ SOLO</button>
+            <button class="btn-menu" style="background: linear-gradient(135deg, #2980b9, #3498db);" onclick="startGame('duo')">👥 DUO</button>
+            <button class="btn-menu" style="background: linear-gradient(135deg, #d35400, #e67e22);" onclick="startGame('trio')">🔥 TRIO</button>
+            <button class="btn-menu" style="background: linear-gradient(135deg, #8e44ad, #9b59b6);" onclick="showScreen('leagues-menu')">🏆 LIGAS</button>
+            <button class="btn-menu" style="background: linear-gradient(135deg, #27ae60, #2ecc71);" onclick="openCage()">📦 JAULA (100 🎟️)</button>
+            <button class="btn-menu" style="background: linear-gradient(135deg, #7f8c8d, #95a5a6);" onclick="showScreen('animals-menu')">🐾 ANIMAIS</button>
+        </div>
+    </div>
+
+    <!-- LIGAS -->
+    <div id="leagues-menu" class="screen" style="display:none;">
+        <h1>🏆 CAMINHO DE LIGAS</h1>
+        <div class="panel" id="leagues-list"></div>
+        <button class="btn-menu" onclick="showScreen('main-menu')">VOLTAR</button>
+    </div>
+
+    <!-- ANIMAIS E NÍVEIS COM SCROLL -->
+    <div id="animals-menu" class="screen" style="display:none;">
+        <h1>🐾 SEUS ANIMAIS E EVOLUÇÃO</h1>
+        <h2>Arraste para rolar a lista de animais:</h2>
+        <div class="panel" id="animals-list"></div>
+        <button class="btn-menu" onclick="showScreen('main-menu')">VOLTAR</button>
+    </div>
+
+    <!-- FIM DE JOGO -->
+    <div id="gameover-screen" class="screen" style="display:none;">
+        <h1 id="gameover-title">🏆 VITÓRIA!</h1>
+        <div class="panel" style="text-align: center; font-size: 0.9rem;">
+            <p id="go-pos">Posição: #1</p>
+            <p id="go-kills">Eliminações: 0</p>
+            <p id="go-trophies" style="color: #f1c40f; font-weight: bold; margin: 2px 0;">Troféus: +40</p>
+            <p id="go-coins" style="color: #e67e22; font-weight: bold; margin: 2px 0;">Moedas: +50</p>
+            <p id="go-tokens" style="color: #2ecc71; font-weight: bold; margin: 2px 0;">Fichas: +15</p>
+        </div>
+        <div class="menu-row">
+            <button class="btn-menu" onclick="startGame(gameMode)">JOGAR NOVAMENTE</button>
+            <button class="btn-menu" style="background: linear-gradient(135deg, #7f8c8d, #95a5a6);" onclick="showScreen('main-menu')">MENU</button>
+        </div>
+    </div>
+
+    <!-- ARENA -->
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="hud">
+            <div class="hud-card">👥 VIVOS: <span id="hud-vivos" style="color: #f1c40f;">30</span></div>
+            <div class="hud-card">🔥 FOGO: <span id="hud-fire" style="color: #e74c3c;">FECHANDO</span></div>
+            <div class="hud-card">👑 GUARDA: <span id="hud-boss" style="color: #e74c3c;">VIVO</span></div>
+        </div>
+
+        <div id="mobile-controls">
+            <div id="joystick-zone"><div id="joystick-knob"></div></div>
+
+            <div id="btn-shotgun" class="action-btn">🔫<span class="btn-label">Espingarda</span><div id="cd-shotgun" class="btn-cd-overlay"></div></div>
+            <div id="btn-spear" class="action-btn">🗡️<span class="btn-label">Lança</span><div id="cd-spear" class="btn-cd-overlay"></div></div>
+            <div id="btn-bomb" class="action-btn">💣<span class="btn-label">Bomba</span><div id="cd-bomb" class="btn-cd-overlay"></div></div>
+
+            <div id="btn-skill" class="action-btn">✨<span class="btn-label">Esquiva</span><div id="cd-skill" class="btn-cd-overlay"></div></div>
+        </div>
+    </div>
+
+    <script>
+        const ANIMALS = {
+            buck: { name: "Buck", emoji: "🐂", hp: 160, speed: 3.2, damage: 18, cd: 5, desc: "Avanço de esquiva rápido" },
+            nix: { name: "Nix", emoji: "🦊", hp: 100, speed: 4.2, damage: 14, cd: 4, desc: "Surto de super velocidade" },
+            bruce: { name: "Bruce", emoji: "🦍", hp: 180, speed: 2.8, damage: 24, cd: 6, desc: "Onda de choque defensiva" },
+            tartaruga: { name: "Tartaruga", emoji: "🐢", hp: 200, speed: 2.3, damage: 15, cd: 8, desc: "Casco protetor invulnerável" },
+            camaleao: { name: "Camaleão", emoji: "🦎", hp: 95, speed: 3.8, damage: 20, cd: 7, desc: "Invisibilidade temporária" },
+            leao: { name: "Leão", emoji: "🦁", hp: 150, speed: 3.9, damage: 25, cd: 7, desc: "Rugido de atordoamento" }
+        };
+
+        const LEAGUES = [
+            { id: 1, name: "Liga 1", trophies: 0, rewardType: "coins", rewardVal: 100, rewardDesc: "100 Moedas" },
+            { id: 2, name: "Liga 2", trophies: 200, rewardType: "animal", rewardVal: "tartaruga", rewardDesc: "Tartaruga 🐢" },
+            { id: 3, name: "Liga 3", trophies: 700, rewardType: "tokens", rewardVal: 150, rewardDesc: "150 Fichas 🎟️" },
+            { id: 4, name: "Liga 4", trophies: 1200, rewardType: "animal", rewardVal: "camaleao", rewardDesc: "Camaleão 🦎" },
+            { id: 5, name: "Liga 5", trophies: 1500, rewardType: "animal", rewardVal: "leao", rewardDesc: "Leão 🦁" }
+        ];
+
+        // SALVAMENTO AUTOMÁTICO DO PROGRESSO DA CONTA
+        let playerStats = { 
+            trophies: 0, coins: 0, tokens: 0, 
+            unlocked: [], selectedAnimal: null, 
+            claimedLeagues: [], hasChosenStarter: false,
+            levels: { buck: 1, nix: 1, bruce: 1, tartaruga: 1, camaleao: 1, leao: 1 }
+        };
+
+        let gameMode = 'solo';
+
+        function loadData() {
+            const saved = localStorage.getItem('zooba2_alfa_save');
+            if (saved) {
+                playerStats = JSON.parse(saved);
+                if (!playerStats.levels) playerStats.levels = { buck: 1, nix: 1, bruce: 1, tartaruga: 1, camaleao: 1, leao: 1 };
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('zooba2_alfa_save', JSON.stringify(playerStats));
+        }
+
+        const MAP_SIZE = 2000;
+        let canvas, ctx, gameState = "MENU", camera = { x: 0, y: 0 };
+        let player, entities = [], projectiles = [], items = [], mapObjects = [];
+        let dangerZone = { radius: MAP_SIZE * 0.8, shrinkRate: 0.35 };
+        let joystick = { active: false, x: 0, y: 0 };
+
+        window.onload = () => {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+
+            loadData();
+
+            if (!playerStats.hasChosenStarter) showStarterMenu();
+            else showScreen('main-menu');
+
+            setupMobileControls();
+            requestAnimationFrame(gameLoop);
+        };
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+            document.getElementById('game-container').style.display = 'none';
+            if (id === 'game') document.getElementById('game-container').style.display = 'block';
+            else { document.getElementById(id).style.display = 'flex'; updateMenus(); }
+        }
+
+        function showStarterMenu() {
+            showScreen('starter-menu');
+            const list = document.getElementById('starter-list');
+            list.innerHTML = '';
+            
+            ['buck', 'nix', 'bruce'].forEach(key => {
+                const a = ANIMALS[key];
+                const card = document.createElement('div');
+                card.className = 'starter-card';
+                card.innerHTML = `<div><strong>${a.emoji} ${a.name}</strong><br><small style="color:#aaa">${a.desc}</small></div>`;
+                card.onclick = () => {
+                    playerStats.unlocked = [key];
+                    playerStats.selectedAnimal = key;
+                    playerStats.hasChosenStarter = true;
+                    saveData();
+                    showScreen('main-menu');
+                };
+                list.appendChild(card);
+            });
+        }
+
+        function updateMenus() {
+            if (!playerStats.hasChosenStarter) return;
+            document.getElementById('menu-trophies').innerText = `🏆 ${playerStats.trophies} Troféus`;
+            document.getElementById('menu-coins').innerText = `🪙 ${playerStats.coins} Moedas`;
+            document.getElementById('menu-tokens').innerText = `🎟️ ${playerStats.tokens} Fichas`;
+
+            const animList = document.getElementById('animals-list');
+            animList.innerHTML = '';
+            for (let key in ANIMALS) {
+                const a = ANIMALS[key];
+                const unlocked = playerStats.unlocked.includes(key);
+                const lvl = playerStats.levels[key] || 1;
+                const cost = lvl * 100;
+
+                const card = document.createElement('div');
+                card.className = `animal-card ${unlocked ? '' : 'locked'} ${playerStats.selectedAnimal === key ? 'selected' : ''}`;
+                
+                let upgradeBtnHTML = '';
+                if (unlocked) {
+                    if (lvl < 10) {
+                        upgradeBtnHTML = `<button class="btn-menu" style="font-size:0.7rem; padding: 4px 8px; background: #e67e22;" onclick="upgradeAnimal('${key}', event)">EVOLUIR Nv.${lvl + 1} (${cost}🪙)</button>`;
+                    } else {
+                        upgradeBtnHTML = `<span style="color:#f1c40f; font-weight:bold; font-size:0.75rem;">MAX (Nv.10)</span>`;
+                    }
+                }
+
+                card.innerHTML = `
+                    <div style="flex: 1;" onclick="selectAnimal('${key}')">
+                        <strong>${unlocked ? '✅' : '🔒'} ${a.emoji} ${a.name} ${unlocked ? `(Nv. ${lvl})` : ''}</strong><br>
+                        <small style="color:#aaa">${a.desc}</small>
+                    </div>
+                    <div>${upgradeBtnHTML}</div>
+                `;
+                animList.appendChild(card);
+            }
+
+            const leagueList = document.getElementById('leagues-list');
+            leagueList.innerHTML = '';
+            LEAGUES.forEach(l => {
+                const reached = playerStats.trophies >= l.trophies;
+                const claimed = playerStats.claimedLeagues.includes(l.id);
+                const card = document.createElement('div');
+                card.className = `league-card`;
+                card.innerHTML = `
+                    <div><strong>${l.name} (${l.trophies} 🏆)</strong><br><small style="color:#f1c40f">${l.rewardDesc}</small></div>
+                    <button class="btn-menu" style="font-size:0.75rem; padding: 4px 10px;" ${(!reached || claimed) ? 'disabled' : ''} id="btn-lg-${l.id}">
+                        ${claimed ? "RESGATADO" : (reached ? "RESGATAR!" : `${l.trophies} 🏆`)}
+                    </button>
+                `;
+                leagueList.appendChild(card);
+
+                if (reached && !claimed) {
+                    document.getElementById(`btn-lg-${l.id}`).onclick = () => {
+                        playerStats.claimedLeagues.push(l.id);
+                        if (l.rewardType === "coins") playerStats.coins += l.rewardVal;
+                        else if (l.rewardType === "tokens") playerStats.tokens += l.rewardVal;
+                        else if (l.rewardType === "animal" && !playerStats.unlocked.includes(l.rewardVal)) playerStats.unlocked.push(l.rewardVal);
+                        saveData();
+                        alert(`🎁 Recompensa Resgatada!`);
+                        updateMenus();
+                    };
+                }
+            });
+        }
+
+        function selectAnimal(key) {
+            if (playerStats.unlocked.includes(key)) {
+                playerStats.selectedAnimal = key;
+                saveData();
+                updateMenus();
+            }
+        }
+
+        function upgradeAnimal(key, event) {
+            event.stopPropagation();
+            const lvl = playerStats.levels[key] || 1;
+            const cost = lvl * 100;
+            if (playerStats.coins >= cost && lvl < 10) {
+                playerStats.coins -= cost;
+                playerStats.levels[key] = lvl + 1;
+                saveData();
+                updateMenus();
+            } else if (playerStats.coins < cost) {
+                alert("Moedas insuficientes para evoluir!");
+            }
+        }
+
+        function openCage() {
+            if (playerStats.tokens < 100) return alert("Você precisa de 100 Fichas!");
+            const locked = Object.keys(ANIMALS).filter(k => !playerStats.unlocked.includes(k));
+            playerStats.tokens -= 100;
+            if (locked.length > 0 && Math.random() < 0.5) {
+                const drawn = locked[Math.floor(Math.random() * locked.length)];
+                playerStats.unlocked.push(drawn);
+                alert(`🎉 Novo Personagem: ${ANIMALS[drawn].emoji} ${ANIMALS[drawn].name}!`);
+            } else {
+                playerStats.coins += 200;
+                alert(`📦 Jaula Aberta! +200 Moedas 🪙`);
+            }
+            saveData();
+            updateMenus();
+        }
+
+        /* === INÍCIO DA PARTIDA === */
+        function startGame(mode) {
+            gameMode = mode;
+            gameState = "PLAYING";
+            showScreen('game');
+
+            dangerZone.radius = MAP_SIZE * 0.8;
+            entities = []; projectiles = []; items = []; mapObjects = [];
+
+            for (let i = 0; i < 90; i++) {
+                mapObjects.push({
+                    x: (Math.random() - 0.5) * MAP_SIZE * 1.2,
+                    y: (Math.random() - 0.5) * MAP_SIZE * 1.2,
+                    type: Math.random() > 0.4 ? 'tree' : 'rock',
+                    radius: 18 + Math.random() * 12
+                });
+            }
+
+            for (let i = 0; i < 25; i++) {
+                items.push({
+                    x: (Math.random() - 0.5) * MAP_SIZE * 0.9,
+                    y: (Math.random() - 0.5) * MAP_SIZE * 0.9,
+                    type: 'medkit'
+                });
+            }
+
+            const dmgMultiplier = (mode === 'duo') ? 0.85 : ((mode === 'trio') ? 0.75 : 1.0);
+
+            // JOGADOR
+            player = createEntity(0, 0, ANIMALS[playerStats.selectedAnimal], false, 1, playerStats.levels[playerStats.selectedAnimal] || 1, dmgMultiplier);
+            entities.push(player);
+
+            // ANIMAIS DA ALFA (BRUCE, BUCK E NIX SEM REPETIR NO SEU TIME)
+            const alfaPool = ['bruce', 'buck', 'nix'];
+            let myTeamAnimals = [playerStats.selectedAnimal];
+            
+            const alliesCount = (mode === 'duo') ? 1 : ((mode === 'trio') ? 2 : 0);
+            
+            for (let a = 0; a < alliesCount; a++) {
+                let available = alfaPool.filter(k => !myTeamAnimals.includes(k));
+                let allyKey = available.length > 0 ? available[0] : 'nix';
+                myTeamAnimals.push(allyKey);
+
+                const ally = createEntity(player.x + (a + 1) * 45, player.y + (a + 1) * 45, ANIMALS[allyKey], true, 1, 1, dmgMultiplier);
+                entities.push(ally);
+            }
+
+            // DEMAIS EQUIPES (SEM REPETIR ANIMAIS DENTRO DA MESMA EQUIPE)
+            const allAnimalKeys = Object.keys(ANIMALS);
+            let teamIdCounter = 2;
+            const teamSize = (mode === 'solo') ? 1 : ((mode === 'duo') ? 2 : 3);
+            const numTeams = (mode === 'solo') ? 14 : ((mode === 'duo') ? 9 : 7);
+
+            for (let i = 0; i < numTeams; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 350 + Math.random() * 700;
+                const bx = Math.cos(angle) * dist;
+                const by = Math.sin(angle) * dist;
+
+                let usedInEnemyTeam = [];
+                for (let t = 0; t < teamSize; t++) {
+                    let available = allAnimalKeys.filter(k => !usedInEnemyTeam.includes(k));
+                    let k = available[Math.floor(Math.random() * available.length)];
+                    usedInEnemyTeam.push(k);
+
+                    const bot = createEntity(bx + t * 40, by + t * 40, ANIMALS[k], true, teamIdCounter, Math.floor(Math.random() * 3) + 1, dmgMultiplier);
+                    entities.push(bot);
+                }
+                teamIdCounter++;
+            }
+
+            // GUARDA LENDÁRIO
+            const boss = createEntity(0, 0, { name: "Guarda Lendário", emoji: "👑", hp: 600, speed: 2.2, damage: 30, cd: 3 }, true, 999, 1, 1.0);
+            boss.isBoss = true;
+            boss.radius = 32;
+            entities.push(boss);
+        }
+
+        function createEntity(x, y, data, isBot, teamId, level = 1, dmgMultiplier = 1.0) {
+            const hpBonus = (level - 1) * 20;
+            const dmgBonus = (level - 1) * 2;
+            const totalHp = data.hp + hpBonus;
+
+            return {
+                x, y, data, isBot, teamId, level,
+                hp: totalHp, maxHp: totalHp, speed: data.speed, 
+                damage: (data.damage + dmgBonus) * dmgMultiplier,
+                radius: 20, angle: 0, kills: 0, skillCd: 0,
+                shotgunCd: 0, spearCd: 0, bombCd: 0,
+                boostTimer: 0, invulnerableTimer: 0, stunTimer: 0,
+                downed: false, bleedTimer: 10.0, reviveProgress: 0, isBoss: false
+            };
+        }
+
+        function setupMobileControls() {
+            const joyZone = document.getElementById('joystick-zone');
+            const joyKnob = document.getElementById('joystick-knob');
+
+            joyZone.addEventListener('touchstart', e => { e.preventDefault(); joystick.active = true; updateJoystick(e.touches[0]); });
+            joyZone.addEventListener('touchmove', e => { e.preventDefault(); if (joystick.active) updateJoystick(e.touches[0]); });
+            joyZone.addEventListener('touchend', e => {
+                e.preventDefault(); joystick.active = false; joystick.x = 0; joystick.y = 0;
+                joyKnob.style.left = '32px'; joyKnob.style.top = '32px';
+            });
+
+            function updateJoystick(touch) {
+                const rect = joyZone.getBoundingClientRect();
+                let dx = touch.clientX - (rect.left + rect.width / 2);
+                let dy = touch.clientY - (rect.top + rect.height / 2);
+                const dist = Math.hypot(dx, dy);
+                if (dist > 35) { dx = (dx / dist) * 35; dy = (dy / dist) * 35; }
+                joystick.x = dx / 35; joystick.y = dy / 35;
+                joyKnob.style.left = (32 + dx) + 'px'; joyKnob.style.top = (32 + dy) + 'px';
+            }
+
+            document.getElementById('btn-shotgun').addEventListener('touchstart', e => { e.preventDefault(); if (gameState === "PLAYING") shootWeapon(player, 'shotgun'); });
+            document.getElementById('btn-spear').addEventListener('touchstart', e => { e.preventDefault(); if (gameState === "PLAYING") shootWeapon(player, 'spear'); });
+            document.getElementById('btn-bomb').addEventListener('touchstart', e => { e.preventDefault(); if (gameState === "PLAYING") shootWeapon(player, 'bomb'); });
+            document.getElementById('btn-skill').addEventListener('touchstart', e => { e.preventDefault(); if (gameState === "PLAYING") useSkill(player); });
+        }
+
+        /* === LÓGICA DE JOGO === */
+        function gameLoop() {
+            if (gameState === "PLAYING") { updateGame(); renderGame(); }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateGame() {
+            if (dangerZone.radius > 0) {
+                dangerZone.radius -= dangerZone.shrinkRate;
+                if (dangerZone.radius < 0) dangerZone.radius = 0;
+            }
+
+            if (player.shotgunCd > 0) player.shotgunCd -= 1/60;
+            if (player.spearCd > 0) player.spearCd -= 1/60;
+            if (player.bombCd > 0) player.bombCd -= 1/60;
+            if (player.skillCd > 0) player.skillCd -= 1/60;
+
+            if (player.hp > 0 && !player.downed) {
+                if (player.stunTimer <= 0) {
+                    if (joystick.x !== 0 || joystick.y !== 0) {
+                        player.angle = Math.atan2(joystick.y, joystick.x);
+                        let spd = player.speed * (player.boostTimer > 0 ? 1.4 : 1);
+                        player.x += joystick.x * spd;
+                        player.y += joystick.y * spd;
+                    }
+                }
+                camera.x = player.x; camera.y = player.y;
+            }
+
+            entities.forEach(ent => {
+                if (ent.shotgunCd > 0) ent.shotgunCd -= 1/60;
+                if (ent.spearCd > 0) ent.spearCd -= 1/60;
+                if (ent.bombCd > 0) ent.bombCd -= 1/60;
+                if (ent.skillCd > 0) ent.skillCd -= 1/60;
+                if (ent.boostTimer > 0) ent.boostTimer -= 1/60;
+                if (ent.invulnerableTimer > 0) ent.invulnerableTimer -= 1/60;
+                if (ent.stunTimer > 0) ent.stunTimer -= 1/60;
+
+                if (Math.hypot(ent.x, ent.y) > dangerZone.radius) ent.hp -= 0.18;
+
+                if (ent.downed) {
+                    ent.bleedTimer -= 1/60;
+                    if (ent.bleedTimer <= 0) ent.hp = 0;
+
+                    let saviorNear = false;
+                    entities.forEach(other => {
+                        if (other !== ent && other.teamId === ent.teamId && !other.downed && Math.hypot(other.x - ent.x, other.y - ent.y) < 50) {
+                            saviorNear = true;
+                        }
+                    });
+
+                    if (saviorNear) {
+                        ent.reviveProgress += 1/60;
+                        if (ent.reviveProgress >= 5.0) {
+                            ent.downed = false;
+                            ent.hp = ent.maxHp * 0.45;
+                            ent.bleedTimer = 10.0;
+                            ent.reviveProgress = 0;
+                        }
+                    } else {
+                        ent.reviveProgress = Math.max(0, ent.reviveProgress - 1/60);
+                    }
+                }
+
+                if (ent.isBot && ent.hp > 0 && !ent.downed) updateBotAI(ent);
+
+                items.forEach((item, idx) => {
+                    if (!ent.downed && Math.hypot(ent.x - item.x, ent.y - item.y) < ent.radius + 12) {
+                        if (item.type === 'medkit') {
+                            ent.hp = Math.min(ent.maxHp, ent.hp + 50);
+                            items.splice(idx, 1);
+                        } else if (item.type === 'boss_loot') {
+                            ent.hp = ent.maxHp;
+                            ent.invulnerableTimer = 5.0;
+                            items.splice(idx, 1);
+                        }
+                    }
+                });
+            });
+
+            projectiles.forEach((p, pIdx) => {
+                p.x += Math.cos(p.angle) * p.speed;
+                p.y += Math.sin(p.angle) * p.speed;
+                p.life -= 1;
+
+                entities.forEach(ent => {
+                    const isFriendly = ent.teamId === p.owner.teamId;
+                    if (ent !== p.owner && !isFriendly && ent.hp > 0 && ent.invulnerableTimer <= 0 && Math.hypot(p.x - ent.x, p.y - ent.y) < ent.radius + (p.radius || 5)) {
+                        ent.hp -= p.damage;
+                        p.life = 0;
+
+                        if (ent.hp <= 0) {
+                            const teamMembers = entities.filter(e => e.teamId === ent.teamId && e !== ent && e.hp > 0);
+                            if (teamMembers.length > 0 && !ent.downed) {
+                                ent.downed = true;
+                                ent.hp = 1;
+                                ent.bleedTimer = 10.0;
+                            } else {
+                                if (p.owner) p.owner.kills++;
+                                items.push({ x: ent.x, y: ent.y, type: ent.isBoss ? 'boss_loot' : 'medkit' });
+                                ent.hp = 0;
+                            }
+                        }
+                    }
+                });
+                if (p.life <= 0) projectiles.splice(pIdx, 1);
+            });
+
+            entities = entities.filter(ent => ent.hp > 0 || ent.downed);
+
+            entities.forEach(bot => {
+                if (bot.isBot && !bot.downed && bot.hp < bot.maxHp * 0.35) {
+                    let nearestKit = items.find(i => i.type === 'medkit' && Math.hypot(i.x - bot.x, i.y - bot.y) < 250);
+                    if (nearestKit) {
+                        bot.angle = Math.atan2(nearestKit.y - bot.y, nearestKit.x - bot.x);
+                        bot.x += Math.cos(bot.angle) * bot.speed;
+                        bot.y += Math.sin(bot.angle) * bot.speed;
+                    }
+                }
+            });
+
+            const bossAlive = entities.some(e => e.isBoss && e.hp > 0);
+            document.getElementById('hud-boss').innerText = bossAlive ? "VIVO" : "DERROTADO";
+            document.getElementById('hud-boss').style.color = bossAlive ? "#e74c3c" : "#2ecc71";
+            document.getElementById('hud-vivos').innerText = entities.length;
+
+            if (dangerZone.radius < 50) document.getElementById('hud-fire').innerText = "FECHADO!";
+
+            const playerTeamAlive = entities.some(e => e.teamId === player.teamId && e.hp > 0);
+            const otherTeamsAlive = entities.some(e => e.teamId !== player.teamId && e.hp > 0);
+
+            if (!playerTeamAlive || !otherTeamsAlive) endGame();
+
+            updateCooldownOverlays();
+        }
+
+        function updateCooldownOverlays() {
+            setOverlay('cd-shotgun', player.shotgunCd);
+            setOverlay('cd-spear', player.spearCd);
+            setOverlay('cd-bomb', player.bombCd);
+            setOverlay('cd-skill', player.skillCd);
+        }
+
+        function setOverlay(id, val) {
+            const el = document.getElementById(id);
+            if (val > 0) { el.style.display = 'flex'; el.innerText = Math.ceil(val) + 's'; }
+            else { el.style.display = 'none'; }
+        }
+
+        function updateBotAI(bot) {
+            if (bot.stunTimer > 0) return;
+
+            let downedAlly = entities.find(other => other !== bot && other.teamId === bot.teamId && other.downed);
+            if (downedAlly) {
+                bot.angle = Math.atan2(downedAlly.y - bot.y, downedAlly.x - bot.x);
+                bot.x += Math.cos(bot.angle) * bot.speed;
+                bot.y += Math.sin(bot.angle) * bot.speed;
+                return;
+            }
+
+            let target = null, minDist = 9999;
+            entities.forEach(other => {
+                if (other.teamId !== bot.teamId && (other.hp > 0 || other.downed)) {
+                    let d = Math.hypot(other.x - bot.x, other.y - bot.y);
+                    if (d < minDist) { minDist = d; target = other; }
+                }
+            });
+
+            if (target) {
+                bot.angle = Math.atan2(target.y - bot.y, target.x - bot.x);
+
+                if (minDist < 120) {
+                    bot.x -= Math.cos(bot.angle) * bot.speed;
+                    bot.y -= Math.sin(bot.angle) * bot.speed;
+                } else if (minDist > 220) {
+                    bot.x += Math.cos(bot.angle) * bot.speed;
+                    bot.y += Math.sin(bot.angle) * bot.speed;
+                }
+
+                if (bot.skillCd <= 0 && minDist < 100) useSkill(bot);
+
+                if (bot.shotgunCd <= 0) shootWeapon(bot, 'shotgun');
+                else if (bot.spearCd <= 0 && minDist > 180) shootWeapon(bot, 'spear');
+                else if (bot.bombCd <= 0 && minDist < 200) shootWeapon(bot, 'bomb');
+            }
+        }
+
+        function shootWeapon(ent, weaponType) {
+            if (ent.downed) return;
+
+            if (weaponType === 'shotgun' && ent.shotgunCd <= 0) {
+                ent.shotgunCd = 5.0;
+                [-0.25, 0, 0.25].forEach(spread => {
+                    projectiles.push({
+                        x: ent.x + Math.cos(ent.angle + spread) * 20,
+                        y: ent.y + Math.sin(ent.angle + spread) * 20,
+                        angle: ent.angle + spread,
+                        speed: 11, damage: ent.damage * 0.8, life: 25, owner: ent
+                    });
+                });
+            } 
+            else if (weaponType === 'spear' && ent.spearCd <= 0) {
+                ent.spearCd = 5.0;
+                projectiles.push({
+                    x: ent.x + Math.cos(ent.angle) * 22,
+                    y: ent.y + Math.sin(ent.angle) * 22,
+                    angle: ent.angle,
+                    speed: 16, damage: ent.damage * 1.5, life: 35, owner: ent
+                });
+            } 
+            else if (weaponType === 'bomb' && ent.bombCd <= 0) {
+                ent.bombCd = 5.0;
+                projectiles.push({
+                    x: ent.x + Math.cos(ent.angle) * 20,
+                    y: ent.y + Math.sin(ent.angle) * 20,
+                    angle: ent.angle,
+                    speed: 8, damage: ent.damage * 2.0, life: 30, radius: 12, owner: ent
+                });
+            }
+        }
+
+        function useSkill(ent) {
+            if (ent.skillCd > 0 || ent.stunTimer > 0 || ent.downed) return;
+            ent.skillCd = ent.data.cd;
+            const name = ent.data.name;
+
+            if (name === "Buck") { ent.x += Math.cos(ent.angle) * 150; ent.y += Math.sin(ent.angle) * 150; }
+            else if (name === "Nix") { ent.boostTimer = 3.0; }
+            else if (name === "Bruce") {
+                entities.forEach(other => {
+                    if (other.teamId !== ent.teamId && Math.hypot(other.x - ent.x, other.y - ent.y) < 110) other.hp -= ent.damage * 1.2;
+                });
+            }
+            else if (name === "Tartaruga") { ent.invulnerableTimer = 2.5; }
+            else if (name === "Camaleão") { ent.stealthTimer = 3.0; }
+            else if (name === "Leão") {
+                entities.forEach(other => {
+                    if (other.teamId !== ent.teamId && Math.hypot(other.x - ent.x, other.y - ent.y) < 120) other.stunTimer = 1.5;
+                });
+            }
+        }
+
+        /* === RENDER === */
+        function renderGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(canvas.width / 2 - camera.x, canvas.height / 2 - camera.y);
+
+            ctx.fillStyle = "#27ae60";
+            ctx.fillRect(-MAP_SIZE, -MAP_SIZE, MAP_SIZE * 2, MAP_SIZE * 2);
+
+            mapObjects.forEach(obj => {
+                ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2);
+                ctx.fillStyle = obj.type === 'tree' ? '#1e8449' : '#7f8c8d'; ctx.fill();
+            });
+
+            items.forEach(item => {
+                ctx.font = "20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillText(item.type === 'boss_loot' ? '⭐' : '🧪', item.x, item.y);
+            });
+
+            projectiles.forEach(p => {
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.radius || 4, 0, Math.PI * 2);
+                ctx.fillStyle = p.radius ? "#e74c3c" : "#f1c40f"; ctx.fill();
+            });
+
+            entities.forEach(ent => {
+                ctx.save();
+                ctx.translate(ent.x, ent.y);
+
+                if (ent.downed) {
+                    ctx.font = "22px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.fillText('🚑', 0, 0);
+
+                    ctx.fillStyle = "#e74c3c"; ctx.font = "bold 11px Arial";
+                    ctx.fillText(`${Math.ceil(ent.bleedTimer)}s`, 0, 22);
+
+                    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(-20, -28, 40, 5);
+                    ctx.fillStyle = "#3498db"; ctx.fillRect(-20, -28, (ent.reviveProgress / 5.0) * 40, 5);
+                } else {
+                    ctx.beginPath(); ctx.arc(0, 0, ent.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = ent.invulnerableTimer > 0 ? "#f39c12" : (ent === player ? "#2ecc71" : (ent.teamId === player.teamId ? "#3498db" : (ent.isBoss ? "#8e44ad" : "#e74c3c")));
+                    ctx.fill();
+
+                    ctx.font = ent.isBoss ? "26px Arial" : "18px Arial"; 
+                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.fillText(ent.data.emoji, 0, 0);
+
+                    if (!ent.isBoss) {
+                        ctx.fillStyle = "#f1c40f"; ctx.font = "bold 9px Arial";
+                        ctx.fillText(`Nv.${ent.level}`, 0, -32);
+                    }
+
+                    ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(-18, -25, 36, 4);
+                    ctx.fillStyle = ent.teamId === player.teamId ? "#3498db" : "#2ecc71";
+                    ctx.fillRect(-18, -25, Math.max(0, (ent.hp / ent.maxHp) * 36), 4);
+                }
+
+                ctx.restore();
+            });
+
+            ctx.beginPath();
+            ctx.arc(0, 0, Math.max(0, dangerZone.radius), 0, Math.PI * 2);
+            ctx.rect(MAP_SIZE * 1.5, -MAP_SIZE * 1.5, -MAP_SIZE * 3, MAP_SIZE * 3);
+            ctx.fillStyle = "rgba(231, 76, 60, 0.45)"; ctx.fill();
+
+            ctx.restore();
+        }
+
+        /* === FIM DE JOGO E SALVAMENTO DE RECOMPENSAS === */
+        function endGame() {
+            gameState = "GAMEOVER";
+            const isWin = entities.some(e => e.teamId === player.teamId && e.hp > 0);
+            
+            const trophiesGain = isWin ? 40 : 5;
+            const coinsGain = isWin ? 80 : 20;
+            const tokensGain = isWin ? 20 : 3;
+
+            playerStats.trophies += trophiesGain;
+            playerStats.coins += coinsGain;
+            playerStats.tokens += tokensGain;
+            
+            saveData();
+
+            document.getElementById('gameover-title').innerText = isWin ? "🏆 VITÓRIA!" : "💀 DERROTA";
+            document.getElementById('gameover-title').style.color = isWin ? "#f1c40f" : "#e74c3c";
+            document.getElementById('go-pos').innerText = isWin ? "Sua equipe venceu a partida!" : "Sua equipe foi eliminada!";
+            document.getElementById('go-kills').innerText = `Eliminações: ${player.kills}`;
+            document.getElementById('go-trophies').innerText = `Troféus: +${trophiesGain}`;
+            document.getElementById('go-coins').innerText = `Moedas: +${coinsGain}`;
+            document.getElementById('go-tokens').innerText = `Fichas: +${tokensGain}`;
+
+            showScreen('gameover-screen');
+        }
+    </script>
+</body>
+</html>n');
+        }
+    </script>
+</body>
+</html>
